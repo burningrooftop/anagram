@@ -1,0 +1,120 @@
+(**************************************************************************)
+(*                                 Anagram Utility                        *)
+(*                                                                        *)
+(*                                     M Cooper                           *)
+(*                                    PO Box 237                          *)
+(*                            St. David, AZ 85630-0237                    *)
+(*                        -------------------------------                 *)
+(*                        Email:  thegrendel@theriver.com                 *)
+(*                Web: http://personal.riverusers.com/~thegrendel         *) 
+(*                                                                        *)
+(*                             License: Public Domain                     *)
+(*                                                                        *)
+(*                Converted to seed7 by Neal Collins, Jan 22, 2024        *)
+(*                                                                        *)
+(**************************************************************************)
+
+$ include "seed7_05.s7i";
+  include "file.s7i";
+
+const integer: FILE_OPENING_ERROR is 3;
+const integer: INVALID_LENGTH_ERROR is 2;
+const char: XOUT is '@';
+const char: WILDCARD is '_';
+const string: WORDFILE is "/usr/share/dict/word.list";
+
+(**********************************ISANAGRAM*******************************)
+(*       Function tests if word is constructible from Letterset           *)
+(*                 Args in: string letterset, string word                 *)
+(*     Returns: error_flag == TRUE if constructible, FALSE if not         *)
+(**************************************************************************)
+
+const func boolean: isanagram(in var string: letterset, in string: word) is func
+  result
+    var boolean: error_flag is TRUE;
+  local
+    var char: c is ' ';
+    var integer: letpos is 0;
+  begin
+    for c range word until error_flag = FALSE do
+      letpos := pos(letterset, c);
+      if letpos > 0 then
+        letterset @:= [letpos] XOUT;
+      else
+        letpos := pos(letterset, WILDCARD);
+        if letpos > 0 then
+          letterset @:= [letpos] XOUT;
+        else
+          error_flag := FALSE;
+        end if;
+      end if;
+    end for;
+  end func;
+
+const proc: getword(in string: letterset, in integer: wordlen, in string: filename) is func
+  local
+    var file: f is STD_NULL;
+    var string: word is "";
+  begin
+    f := open(filename, "rt");
+    if f = STD_NULL then
+      writeln("*** Cannot open Wordfile!");
+      exit(FILE_OPENING_ERROR);
+    end if;
+
+    while not eof(f) do
+      word := getln(f);
+      if wordlen = 0 or length(word) = wordlen then
+        if isanagram(letterset, word) then
+          writeln(word);
+        end if;
+      end if;
+    end while;
+
+    close(f);
+  end func;
+
+const proc: main is func
+  local
+    var array string: arguments is 0 times "";
+    var string: letterset is "";
+    var string: filename is "";
+    var integer: wordlen is 0;
+    var string: wordlen_str is "";
+  begin
+    arguments := argv(PROGRAM);
+
+    if length(arguments) = 0 then
+      writeln("Enter a LETTERSET to test ... ");
+      letterset := getln(IN);
+      writeln("Enter word length [" <& length(letterset) <& "] ... ");
+      wordlen_str := getln(IN);
+    else
+      letterset := arguments[1];
+    end if;
+
+    if length(arguments) >= 2 then
+      wordlen_str := arguments[2];
+    end if;
+
+    if length(arguments) >= 3 then
+      filename := arguments[3];
+    else
+      filename := WORDFILE;
+    end if;
+
+    if wordlen_str = "" then
+      wordlen := length(letterset);
+    else
+      block
+        wordlen := integer(wordlen_str);
+      exception
+        catch RANGE_ERROR:
+          writeln("*** Invalid word length!");
+          exit(INVALID_LENGTH_ERROR);
+      end block;
+    end if;
+
+    getword(lower(letterset), wordlen, filename);
+
+  end func;
